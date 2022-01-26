@@ -91,6 +91,8 @@ pub struct AptioV {
     pub project         : AptioProject,
     #[structopt(flatten)]
     pub toolkit         : AptioToolkit,
+    #[structopt(skip)]
+    pub scripts         : Option<Scripts>,
 }
 
 #[derive(Debug, Clone, StructOpt, serde::Deserialize)]
@@ -102,12 +104,6 @@ pub struct AptioProject {
 
 #[derive(Debug, Clone, StructOpt, serde::Deserialize)]
 pub struct AptioToolkit {
-    /// Path to C compiler for 32-bit arch
-    #[structopt(long, parse(from_os_str))]
-    pub cc32            : Option<std::path::PathBuf>,
-    /// Path to C compiler for 64-bit arch
-    #[structopt(long, parse(from_os_str))]
-    pub cc64            : Option<std::path::PathBuf>,
     /// Path to Enterprise WDK
     #[structopt(short, long, parse(from_os_str))]
     pub ewdk            : Option<std::path::PathBuf>,
@@ -117,4 +113,17 @@ pub struct AptioToolkit {
     /// Path of PYTHON_COMMAND
     #[structopt(short, long, parse(from_os_str))]
     pub pycmd           : Option<std::path::PathBuf>,
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct Scripts {
+    pub fore_build      : Option<Vec<ScriptsDesc>>,
+    pub post_build      : Option<Vec<ScriptsDesc>>,
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct ScriptsDesc {
+    pub interpreter     : std::path::PathBuf,
+    pub opts            : Option<String>,
+    pub file            : std::path::PathBuf,
 }

@@ -16,10 +16,33 @@ use crate::audk::AptioToolkit;
 impl Build {
     pub fn new() -> Self {
         Self {
-            project: AptioProject { veb: None }, toolkit: AptioToolkit { cc32: None, cc64: None, ewdk: None, tools: None, pycmd: None }
+            project: AptioProject { veb: None }, toolkit: AptioToolkit { ewdk: None, tools: None, pycmd: None }, scripts: None
         }
     }
     pub fn handler(&self, cfg_aptio_v: &Option<&Build>, no_clean: bool) {
+        let cmd: (&str, &str) = if cfg!(target_os = "windows") { ("powershell", "-command") } else { ("sh", "-c") };
+        // scripts of build hooks
+        let scripts = if let Some(cfg_aptio_v) = cfg_aptio_v {
+            if let Some(scripts) = cfg_aptio_v.scripts.as_ref() {
+                Some(scripts)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        //
+        // fore_build hooks
+        //
+        if let Some(scripts) = scripts {
+            if let Some(fore_build) = scripts.fore_build.as_ref() {
+                for i in fore_build {
+                    let opts = if let Some(opts) = i.opts.as_ref() { opts } else { "" };
+                    std::process::Command::new(&i.interpreter).arg(opts).arg(&i.file).status().unwrap();
+                }
+            }
+        }
+
         let veb = if let Some(veb) = &self.project.veb {
             veb
         } else {
@@ -27,26 +50,6 @@ impl Build {
         };
         if !veb.is_file() {
             println!("ERR: invalid project veb: {:?}", veb);
-            return
-        }
-
-        let cc32 = if let Some(cc32) = &self.toolkit.cc32 {
-            cc32
-        } else {
-            cfg_aptio_v.expect("ERR: aptio_v is neither given in cmdline or json").toolkit.cc32.as_ref().expect("ERR: cc32 is None in json.")
-        };
-        if !cc32.join("cl.exe").is_file() {
-            println!("ERR: invalid cc32 {:?}", cc32);
-            return
-        }
-
-        let cc64 = if let Some(cc64) = &self.toolkit.cc64 {
-            cc64
-        } else {
-            cfg_aptio_v.expect("ERR: aptio_v is neither given in cmdline or json").toolkit.cc64.as_ref().expect("ERR: cc64 is None in json.")
-        };
-        if !cc64.join("cl.exe").is_file() {
-            println!("ERR: invalid cc64 {:?}", cc64);
             return
         }
 
@@ -59,7 +62,6 @@ impl Build {
             println!("ERR: invalid ewdk {:?}", ewdk);
             return
         }
-
         let tools = if let Some(tools) = &self.toolkit.tools {
             tools
         } else {
@@ -69,7 +71,6 @@ impl Build {
             println!("ERR: invalid tools {:?}", tools);
             return
         }
-
         let pycmd = if let Some(pycmd) = &self.toolkit.pycmd {
             pycmd
         } else {
@@ -80,26 +81,34 @@ impl Build {
             return
         }
 
-        std::env::set_var("CCX86DIR"        , &cc32);
-        std::env::set_var("CCX64DIR"        , &cc64);
-        std::env::set_var("EWDK_DIR"        , &ewdk);
-        std::env::set_var("TOOLS_DIR"       , &tools);
-        std::env::set_var("PYTHON_COMMAND"  , &pycmd);
+        std::env::set_var(            "VEB" , veb.file_stem().unwrap()  );
+        std::env::set_var(       "EWDK_DIR" , &ewdk                     );
+        std::env::set_var(      "TOOLS_DIR" , &tools                    );
+        std::env::set_var( "PYTHON_COMMAND" , &pycmd                    );
+        let pyth = String::new() + pycmd.parent().unwrap().to_str().unwrap() + ";" + pycmd.parent().unwrap().join("Scripts").to_str().unwrap() + ";";
         let path = if let Some(path) = std::env::var_os("PATH") {
-            String::from(tools.to_str().unwrap()) + ";" + path.to_str().unwrap()
+            String::new() + &pyth + tools.to_str().unwrap() + ";" + path.to_str().unwrap()
         } else {
-            String::from(tools.to_str().unwrap())
+            String::new() + &pyth + tools.to_str().unwrap()
         };
-        std::env::set_var("PATH"            , path);
-        std::env::set_var("VEB"             , veb.file_stem().unwrap());
+        std::env::set_var(           "PATH" , path                      );
 
         let make_opts = if no_clean {
             String::from("all")
         } else {
             String::from("rebuild")
         };
-
-        let cmd: (&str, &str) = if cfg!(target_os = "windows") { ("cmd", "/c") } else { ("sh", "-c") };
-        std::process::Command::new(cmd.0).arg(cmd.1).arg("make.exe").arg(make_opts).status().unwrap();
+        std::process::Command::new(cmd.0).arg(cmd.1).arg("make").arg(make_opts).status().unwrap();
+        //
+        // post_build hooks
+        //
+        if let Some(scripts) = scripts {
+            if let Some(post_build) = scripts.post_build.as_ref() {
+                for i in post_build {
+                    let opts = if let Some(opts) = i.opts.as_ref() { opts } else { "" };
+                    std::process::Command::new(&i.interpreter).arg(opts).arg(&i.file).status().unwrap();
+                }
+            }
+        }
     }
 }

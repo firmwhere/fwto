@@ -51,6 +51,10 @@ impl Ovrd {
             println!("ERR: want override file, which's unsupport {:?}", ws.join(&self.src));
             return;
         }
+        if !self.src.is_file() {
+            println!("ERR: want override.src, but not a file: {:?}", self.src);
+            return;
+        }
         let cif = if let Some(cif) = &opt_oemovrd.cif {
             cif
         } else {
@@ -88,21 +92,21 @@ impl Ovrd {
     }
 
     fn build_cif_override_line(&self, dst: &std::path::PathBuf) -> String {
-        let ovrd_src = &self.src;
-        let ovrd_dst = std::path::PathBuf::from(dst.file_name().unwrap()).join(&self.src);
-
+        let ws       = std::env::current_dir().unwrap();
+        let ovrd_tmp = std::env::current_dir().unwrap().join(&self.src);
+        //  support relative to current file
+        let ovrd_src = ovrd_tmp.strip_prefix(&ws).unwrap();
+        let ovrd_dst = std::path::PathBuf::from(dst.file_name().unwrap()).join(&ovrd_src);
+        // +path_slash
         use path_slash::PathBufExt;
+        // -path_slash
         let ovrd_src = std::path::PathBuf::from_slash(ovrd_src.to_str().unwrap());
         let ovrd_dst = std::path::PathBuf::from_slash(ovrd_dst.to_str().unwrap());
 
         String::new() + r#"""# + ovrd_dst.to_str().unwrap() + r#"";""# + ovrd_src.to_str().unwrap() + r#"""# + "\r\n"
     }
-    
-    fn add_override_files(&self, dst: &std::path::PathBuf, org: &Option<std::path::PathBuf>, ibvovrd_dst: &Option<&std::path::PathBuf>) -> Result<bool, String> {
-        if !self.src.is_file() {
-            return Err(format!("ERR: want override file, but no file found {:?}", &self.src));
-        }
 
+    fn add_override_files(&self, dst: &std::path::PathBuf, org: &Option<std::path::PathBuf>, ibvovrd_dst: &Option<&std::path::PathBuf>) -> Result<bool, String> {
         let mut is_1st_time_ovrd = true;
 
         let fdst = std::path::PathBuf::from(dst).join(&self.src);
@@ -159,10 +163,12 @@ impl Ovrd {
 
     pub fn override_add(&self, cif: &std::path::PathBuf, dst: &std::path::PathBuf, org: &Option<std::path::PathBuf>, ibvovrd_dst: &Option<&std::path::PathBuf>) {
         let result = self.add_override_files(dst, org, ibvovrd_dst);
-        if let Err(error) = result { println!("{}", error);return; }
+        if let Err(error) = result {
+            return println!("{}", error)
+        }
 
         if let Ok(is_1st_time_ovrd) = result {
-            if !is_1st_time_ovrd { return; }
+            if !is_1st_time_ovrd { return }
         }
         // build [file] override statement and add to cif
         let cif_override_line = self.build_cif_override_line(dst);
@@ -171,7 +177,7 @@ impl Ovrd {
         let lines = cifbf.lines();
         let mut fcif = fs::OpenOptions::new().write(true).truncate(true).open(cif).unwrap();
         for line in lines {
-            if line.to_ascii_lowercase().starts_with("<endcomponent>") {
+            if line.trim().to_ascii_lowercase().starts_with("<endcomponent>") {
                 fcif.write(cif_override_line.as_bytes()).unwrap();
             }
             let line_with_new_line = String::from(line) + "\r\n";
@@ -180,46 +186,52 @@ impl Ovrd {
     }
 
     pub fn override_del(&self, cif: &std::path::PathBuf, dst: &std::path::PathBuf, org: &Option<std::path::PathBuf>) {
-        use path_slash::PathBufExt;
-        let old_dst_file = std::path::PathBuf::from_slash(std::path::PathBuf::from(dst.file_name().unwrap()).join(&self.src).to_str().unwrap());
-        let old_dst_line = String::new() + r#"""# + old_dst_file.to_str().unwrap() + r#"""#;
+        let old_dst_file = std::path::PathBuf::from(dst.file_name().unwrap()).join(&self.src);
 
         let cifbf = fs::read_to_string(cif).unwrap();
         let lines = cifbf.lines();
         let mut fcif = fs::OpenOptions::new().write(true).truncate(true).open(cif).unwrap();
         for line in lines {
-            if line.to_ascii_lowercase().starts_with(&old_dst_line.to_ascii_lowercase()) {
-                self.del_override_files(dst, org);
+            let line_with_new_line = String::from(line) + "\r\n";
+            if let Some((_fdst, _fsrc)) = line.trim().split_once(";") {
+                if std::path::PathBuf::from(_fdst.trim_matches('"')) == old_dst_file {
+                    self.del_override_files(dst, org);
+                } else {
+                    fcif.write(line_with_new_line.as_bytes()).unwrap();
+                }
             } else {
-                let line_with_new_line = String::from(line) + "\r\n";
                 fcif.write(line_with_new_line.as_bytes()).unwrap();
             }
         }
     }
 
     pub fn override_replace_with(&self, new: &Self, cif: &std::path::PathBuf, dst: &std::path::PathBuf, org: &Option<std::path::PathBuf>, ibvovrd_dst: &Option<&std::path::PathBuf>) {
-        use path_slash::PathBufExt;
-        let old_dst_file = std::path::PathBuf::from_slash(std::path::PathBuf::from(dst.file_name().unwrap()).join(&self.src).to_str().unwrap());
-        let old_dst_line = String::new() + r#"""# + old_dst_file.to_str().unwrap() + r#"""#;
+        let old_dst_file = std::path::PathBuf::from(dst.file_name().unwrap()).join(&self.src);
 
         let cifbf = fs::read_to_string(cif).unwrap();
         let lines = cifbf.lines();
         let mut fcif = fs::OpenOptions::new().write(true).truncate(true).open(cif).unwrap();
         for line in lines {
-            if line.to_ascii_lowercase().starts_with(&old_dst_line.to_ascii_lowercase()) {
-                // replace old override with new override
-                let result = new.add_override_files(dst, org, ibvovrd_dst);
-                if let Err(error) = result { println!("{}", error); return; }
+            let line_with_new_line = String::from(line) + "\r\n";
+            if let Some((_fdst, _fsrc)) = line.trim().split_once(";") {
+                if std::path::PathBuf::from(_fdst.trim_matches('"')) == old_dst_file {
+                    // replace old override with new override
+                    let result = new.add_override_files(dst, org, ibvovrd_dst);
+                    if let Err(error) = result {
+                        return println!("{}", error)
+                    }
 
-                let old_fdst = dst.join(&self.src);
-                let new_fdst = dst.join(& new.src);
-                ffs::copy(&old_fdst, &new_fdst).unwrap();
+                    let old_fdst = dst.join(&self.src);
+                    let new_fdst = dst.join(& new.src);
+                    ffs::copy(&old_fdst, &new_fdst).unwrap();
 
-                self.del_override_files(dst, org);
+                    self.del_override_files(dst, org);
 
-                fcif.write(new.build_cif_override_line(dst).as_bytes()).unwrap();
+                    fcif.write(new.build_cif_override_line(dst).as_bytes()).unwrap();
+                } else {
+                    fcif.write(line_with_new_line.as_bytes()).unwrap();
+                }
             } else {
-                let line_with_new_line = String::from(line) + "\r\n";
                 fcif.write(line_with_new_line.as_bytes()).unwrap();
             }
         }

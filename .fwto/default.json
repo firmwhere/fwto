@@ -1,22 +1,44 @@
 {
     "project": {
-        "workspace": "E:\\Wv2\\code"
+        "workspace": "E:/code"
     },
     "oemovrd": {
-        "cif": "LenovoPlatformPkg\\OverrideRC\\OverrideRC.cif",
-        "dst": "LenovoPlatformPkg\\OverrideRC\\OVERRIDE",
+        "cif": "PlatformPkg/OverrideRC.cif",
+        "dst": "PlatformPkg/OVERRIDE",
         "org": "Original"
     },
     "aptio_v": {
         "project": {
-            "veb"   : "WhitleyCrb.veb"
+            "veb"   : "EagleStreamCrb.veb"
         },
         "toolkit": {
-            "cc32"  : "C:\\Efika\\FwTool\\AptioV\\WDDK\\7600.16385.1\\bin\\x86\\x86",
-            "cc64"  : "C:\\Efika\\FwTool\\AptioV\\WDDK\\7600.16385.1\\bin\\x86\\amd64",
-            "ewdk"  : "C:\\Efika\\FwTool\\AptioV\\EWDK",
-            "tools" : "C:\\Efika\\FwTool\\AptioV\\Aptio_5.x_TOOLS_40\\BuildTools",
-            "pycmd" : "C:\\Efika\\PYii\\python.exe"
+            "ewdk"  : "C:/EfiKa/FwTools/EWDK",
+            "tools" : "C:/EfiKa/FwTools/Aptio_5.x_TOOLS_44/BuildTools",
+            "pycmd" : "C:/EfiKa/FwTools/PY.III.X64/python.exe"
+        },
+        "scripts": {
+            "fore_build": [
+                {
+                    "interpreter": "python",
+                    "file": "script_relative_path_to_workspace-or-absolute_path.py"
+                },
+                {
+                    "interpreter": "ruby",
+                    "file": "script_relative_path_to_workspace-or-absolute_path.rb"
+                }
+            ],
+            "post_build": [
+                {
+                    "interpreter": "cmd",
+                    "opts": "/c",
+                    "file": "script_relative_path_to_workspace-or-absolute_path.bat"
+                },
+                {
+                    "interpreter": "powershell",
+                    "opts": "-file",
+                    "file": "script_relative_path_to_workspace-or-absolute_path.ps1"
+                }
+            ]
         }
     }
 }

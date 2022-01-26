@@ -1,7 +1,7 @@
 ## fwto.exe
 
 ```powershell
-fwto 0.5.1
+fwto 0.5.4
 AptioV Codebase Upgrade Toolkit @liuyi28@lenovo.com
 
 USAGE:
@@ -49,8 +49,6 @@ SUBCOMMANDS:
             "veb"   : "<project>.veb"
         },
         "toolkit": {
-            "cc32"  : "The absolute path to c compiler of 32-bit arch, in where cl.exe is",
-            "cc64"  : "The absolute path to c compiler of 64-bit arch, in where cl.exe is",
             "ewdk"  : "The absolute path to EWDK, in where LaunchBuildEnv.cmd is",
             "tools" : "The absolute path to BuildTools of Aptio_x.x_TOOLS_xx",
             "pycmd" : "The absolute path to python.exe file"
@@ -75,7 +73,7 @@ SUBCOMMANDS:
 ### Command help
 
 ```powershell
-fwto.exe-ovrd 0.5.1
+fwto.exe-ovrd 0.5.4
 Override a file of AptioV codebase
 
 USAGE:
@@ -116,7 +114,7 @@ OPTIONS:
 ### Command help
 
 ```powershell
-fwto.exe-cbup 0.5.1
+fwto.exe-cbup 0.5.4
 Extract diffs for codebase upgrade
 
 USAGE:
@@ -169,7 +167,7 @@ ovrd        : source files we override, and to merge
 ### Command help
 
 ```powershell
-fwto.exe-view 0.5.1
+fwto.exe-view 0.5.4
 Extract diffs for ovrd-code review
 
 USAGE:
@@ -208,7 +206,7 @@ new         : new source files
 ### Command help
 
 ```powershell
-fwto.exe-build 0.5.1
+fwto.exe-build 0.5.4
 Build the project code in anywhere
 
 USAGE:
@@ -220,12 +218,41 @@ FLAGS:
     -V, --version     Prints version information
 
 OPTIONS:
-        --cc32 <cc32>      Path to C compiler for 32-bit arch
-        --cc64 <cc64>      Path to C compiler for 64-bit arch
     -e, --ewdk <ewdk>      Path to Enterprise WDK
     -p, --pycmd <pycmd>    Path of PYTHON_COMMAND
     -t, --tools <tools>    Path to BuildTools of AptioV
     -v, --veb <veb>        Visual eBios of AMI project
+```
+
+- Support build hooks, just by setup `scripts` into `aptio_v` in json configuration:
+
+```json
+    "aptio_v": {
+        "scripts": {
+            "fore_build": [
+                {
+                    "interpreter": "python",
+                    "file": "script_relative_path_to_workspace-or-absolute_path.py"
+                },
+                {
+                    "interpreter": "ruby",
+                    "file": "script_relative_path_to_workspace-or-absolute_path.rb"
+                }
+            ],
+            "post_build": [
+                {
+                    "interpreter": "cmd",
+                    "opts": "/c",
+                    "file": "script_relative_path_to_workspace-or-absolute_path.bat"
+                },
+                {
+                    "interpreter": "powershell",
+                    "opts": "-file",
+                    "file": "script_relative_path_to_workspace-or-absolute_path.ps1"
+                }
+            ]
+        }
+    }
 ```
 
 ### Command example

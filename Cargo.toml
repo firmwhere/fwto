@@ -1,6 +1,6 @@
 [package]
 name            = "fwto"
-version         = "0.5.1"
+version         = "0.5.4"
 authors         = ["Karl Yi28 Liu <liuyi28@lenovo.com>"]
 edition         = "2018"
 
