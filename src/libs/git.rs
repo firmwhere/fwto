@@ -41,6 +41,35 @@ pub fn show_no_format(commit: &String, name_only: bool, find_renames: &str, diff
     std::process::Command::new(cmd.0).arg(cmd.1).arg(gitcmd).output().unwrap()
 }
 
+pub fn diff_no_format(old_commit: &String, new_commit: &String, name_only: bool, find_renames: &str, diff_filter: &str, show_dst: &Vec<&Option<&std::path::PathBuf>>, exclude_show_dst: bool) -> std::process::Output {
+    let cmd: (&str, &str) = if cfg!(target_os = "windows") { ("cmd", "/c") } else { ("sh", "-c") };
+    let show_name = if name_only { "--name-only" } else { "--name-status" };
+    let mut show_files_or_not = false;
+    for path in show_dst {
+        if let Some(path) = path {
+            if path.is_dir() {
+                show_files_or_not = true;
+            }
+        }
+    };
+    let mut show_files = if show_files_or_not {
+        String::new() + " " + "--" + " "
+    } else {
+        String::new()
+    };
+    if show_files_or_not {
+        for path in show_dst {
+            if let Some(path) = path {
+                if path.is_dir() {
+                    show_files = show_files + if exclude_show_dst { ":!:" } else { "" } + &path.to_slash().unwrap() + " ";
+                }
+            }
+        };
+    }
+    let gitcmd = String::from(r#"git diff --format="#) + " " + show_name + " " + "--find-renames=" + find_renames + " " + "--diff-filter=" + diff_filter + " " + old_commit + " " + new_commit + &show_files;
+    std::process::Command::new(cmd.0).arg(cmd.1).arg(gitcmd).output().unwrap()
+}
+
 pub fn create_file_from(commit: &String, fsrc: &std::path::PathBuf, fdst: &std::path::PathBuf, rcommit: Option<&str>) {
     let cmd: (&str, &str) = if cfg!(target_os = "windows") { ("cmd", "/c") } else { ("sh", "-c") };
     let output = std::process::Command::new(cmd.0).arg(cmd.1).arg("git show").arg(String::from(commit) + if let Some(r) = rcommit { r } else { "" } + ":" + &fsrc.to_slash().unwrap()).output().unwrap();
@@ -51,7 +80,7 @@ pub fn create_file_from(commit: &String, fsrc: &std::path::PathBuf, fdst: &std::
         }
         fs::write(&fdst, output.stdout).unwrap();
     } else {
-        println!("create_file_from_git.0: fsrc: {:?}", fsrc);
+        println!("create_file_from_git: fsrc: {:?}", fsrc);
     }
 }
 

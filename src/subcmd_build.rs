@@ -37,8 +37,13 @@ impl Build {
         if let Some(scripts) = scripts {
             if let Some(fore_build) = scripts.fore_build.as_ref() {
                 for i in fore_build {
-                    let opts = if let Some(opts) = i.opts.as_ref() { opts } else { "" };
-                    std::process::Command::new(&i.interpreter).arg(opts).arg(&i.file).status().unwrap();
+                    let null_args = Vec::<String>::new();
+                    let null_farg =       String ::new();
+                    let args = if let Some(args) = i.args.as_ref() { args } else { &null_args };
+                    let farg = if let Some(farg) = i.farg.as_ref() { farg } else { &null_farg };
+                    if i.file.is_file() {
+                        std::process::Command::new(&i.interpreter).args(args).arg(farg).arg(&i.file).status().unwrap();
+                    }
                 }
             }
         }
@@ -105,8 +110,13 @@ impl Build {
         if let Some(scripts) = scripts {
             if let Some(post_build) = scripts.post_build.as_ref() {
                 for i in post_build {
-                    let opts = if let Some(opts) = i.opts.as_ref() { opts } else { "" };
-                    std::process::Command::new(&i.interpreter).arg(opts).arg(&i.file).status().unwrap();
+                    let null_args = Vec::<String>::new();
+                    let null_farg =       String ::new();
+                    let args = if let Some(args) = i.args.as_ref() { args } else { &null_args };
+                    let farg = if let Some(farg) = i.farg.as_ref() { farg } else { &null_farg };
+                    if i.file.is_file() {
+                        std::process::Command::new(&i.interpreter).args(args).arg(farg).arg(&i.file).status().unwrap();
+                    }
                 }
             }
         }

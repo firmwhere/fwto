@@ -44,7 +44,7 @@ enum Command {
         #[structopt(flatten)]
         diff        : subcmd_cbup::Cbup,
     },
-    /// Extract diffs for ovrd-code review
+    /// Extract diffs for ws's two commits
     View {
         #[structopt(flatten)]
         diff        : subcmd_view::View,
@@ -67,27 +67,37 @@ fn main() {
         return
     }
 
-    let mut ws = std::path::PathBuf::new();
-    let mut aptio_v     = None;
+    let mut workspace   = std::path::PathBuf::new();
+    let mut cfg_aptio_v = None;
     let mut cfg_oemovrd = None;
     let mut cfg_ibvovrd = None;
     if let Some(audk) = audk_option {
-        ws = audk.project.workspace.unwrap();
-        aptio_v = audk.aptio_v;
+        workspace   = audk.project.workspace.unwrap();
+        cfg_aptio_v = audk.aptio_v;
         cfg_oemovrd = audk.oemovrd;
         cfg_ibvovrd = audk.ibvovrd;
     }
 
-    if let Some(ws_tmp) = opt.project.workspace {
-        ws = ws_tmp;
+    if let Some(ws) = opt.project.workspace {
+        workspace = ws;
+    }
+    let wp = workspace.parent().unwrap();
+    let ws =&workspace;
+    if !ws.join("MdePkg").is_dir() && ws.is_dir() {
+        std::env::set_current_dir(ws).unwrap();
+        setup_workspace(&cfg_aptio_v.as_ref());
+    }
+    if !ws.join("MdePkg").is_dir() && wp.is_dir() {
+        std::env::set_current_dir(wp).unwrap();
+        setup_workspace(&cfg_aptio_v.as_ref()); 
     }
     if !ws.join("MdePkg").is_dir() {
-        println!("ERR: invalid ws {:?}", ws);
+        println!("ERR: invalid workspace {:?}", ws);
         return
     }
-    std::env::set_current_dir(&ws).unwrap();
+    std::env::set_current_dir(ws).unwrap();
 
-    match opt.cmd.unwrap() {
+    match opt.cmd.as_ref().unwrap() {
         Command::Ovrd{ovrd} => {
             ovrd.handler(&opt.oemovrd, &cfg_oemovrd.as_ref(), &cfg_ibvovrd.as_ref());
         },
@@ -98,7 +108,38 @@ fn main() {
             diff.handler(&opt.oemovrd, &cfg_oemovrd.as_ref(), &cfg_ibvovrd.as_ref());
         },
         Command::Build{build, no_clean} => {
-            build.handler(&aptio_v.as_ref(), no_clean);
+            build.handler(&cfg_aptio_v.as_ref(), *no_clean);
         },
+    }
+}
+
+fn setup_workspace(cfg_aptio_v: &Option<&crate::audk::AptioV>) {
+    //
+    // scripts of build hooks
+    //
+    let scripts = if let Some(cfg_aptio_v) = cfg_aptio_v {
+        if let Some(scripts) = cfg_aptio_v.scripts.as_ref() {
+            Some(scripts)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+    //
+    // setup workspace hook
+    //
+    if let Some(scripts) = scripts {
+        if let Some(work_space) = scripts.work_space.as_ref() {
+            for i in work_space {
+                let null_args = Vec::<String>::new();
+                let null_farg =       String ::new();
+                let args = if let Some(args) = i.args.as_ref() { args } else { &null_args };
+                let farg = if let Some(farg) = i.farg.as_ref() { farg } else { &null_farg };
+                if i.file.is_file() {
+                    std::process::Command::new(&i.interpreter).args(args).arg(farg).arg(&i.file).status().unwrap();
+                }
+            }
+        }
     }
 }

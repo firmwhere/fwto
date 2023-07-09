@@ -117,6 +117,7 @@ pub struct AptioToolkit {
 
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct Scripts {
+    pub work_space      : Option<Vec<ScriptsDesc>>,
     pub fore_build      : Option<Vec<ScriptsDesc>>,
     pub post_build      : Option<Vec<ScriptsDesc>>,
 }
@@ -124,6 +125,7 @@ pub struct Scripts {
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct ScriptsDesc {
     pub interpreter     : std::path::PathBuf,
-    pub opts            : Option<String>,
+    pub args            : Option<Vec<String>>,
+    pub farg            : Option<String>,
     pub file            : std::path::PathBuf,
 }

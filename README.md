@@ -1,7 +1,7 @@
 ## fwto.exe
 
 ```powershell
-fwto 0.5.4
+fwto 0.5.5
 AptioV Codebase Upgrade Toolkit @liuyi28@lenovo.com
 
 USAGE:
@@ -23,6 +23,7 @@ SUBCOMMANDS:
     cbup     Extract diffs for codebase upgrade
     help     Prints this message or the help of the given subcommand(s)
     ovrd     Override a file of AptioV codebase
+    view     Extract diffs for code two commits
 ```
 
 ### Json configuration support
@@ -73,7 +74,7 @@ SUBCOMMANDS:
 ### Command help
 
 ```powershell
-fwto.exe-ovrd 0.5.4
+fwto.exe-ovrd 0.5.5
 Override a file of AptioV codebase
 
 USAGE:
@@ -114,7 +115,7 @@ OPTIONS:
 ### Command help
 
 ```powershell
-fwto.exe-cbup 0.5.4
+fwto.exe-cbup 0.5.5
 Extract diffs for codebase upgrade
 
 USAGE:
@@ -128,7 +129,6 @@ FLAGS:
 OPTIONS:
     -c, --commit <commit>    Commit to be extract
 ```
-
 
 ```ini
 # fwto.exe cbup -c <commit>
@@ -167,20 +167,20 @@ ovrd        : source files we override, and to merge
 ### Command help
 
 ```powershell
-fwto.exe-view 0.5.4
+fwto.exe-view 0.5.5
 Extract diffs for ovrd-code review
 
 USAGE:
-    fwto.exe view --commit <commit>
+    fwto.exe view [OPTIONS]
 
 FLAGS:
     -h, --help       Prints help information
     -V, --version    Prints version information
 
 OPTIONS:
-    -c, --commit <commit>    Commit to be extract
+    -n, --new <new>    New commit for diff [default: HEAD]
+    -o, --old <old>    Old commit for diff
 ```
-
 
 ```ini
 # fwto.exe cbup -c <commit>
@@ -206,7 +206,7 @@ new         : new source files
 ### Command help
 
 ```powershell
-fwto.exe-build 0.5.4
+fwto.exe-build 0.5.5
 Build the project code in anywhere
 
 USAGE:
@@ -229,25 +229,27 @@ OPTIONS:
 ```json
     "aptio_v": {
         "scripts": {
-            "fore_build": [
-                {
-                    "interpreter": "python",
-                    "file": "script_relative_path_to_workspace-or-absolute_path.py"
-                },
+            "work_space":  [
                 {
                     "interpreter": "ruby",
                     "file": "script_relative_path_to_workspace-or-absolute_path.rb"
                 }
             ],
+            "fore_build": [
+                {
+                    "interpreter": "python",
+                    "file": "script_relative_path_to_workspace-or-absolute_path.py"
+                }
+            ],
             "post_build": [
                 {
                     "interpreter": "cmd",
-                    "opts": "/c",
+                    "farg": "/c",
                     "file": "script_relative_path_to_workspace-or-absolute_path.bat"
                 },
                 {
                     "interpreter": "powershell",
-                    "opts": "-file",
+                    "farg": "-file",
                     "file": "script_relative_path_to_workspace-or-absolute_path.ps1"
                 }
             ]
